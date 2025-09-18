@@ -1,41 +1,56 @@
 import React, { useEffect, useState } from "react";
-import './Newsapp.css';
+import "./Newsapp.css";
 import Card from "./Card";
 
 const Newsapp = () => {
   const [search, setSearch] = useState("india");
   const [newsData, setNewsData] = useState(null);
+  const [error, setError] = useState(null);
+
   const API_KEY = "6ed1a74e8fdd476fb41ebdf3d38c4422";
 
-  // ✅ getData accepts an optional query
+  // ✅ Fetch news data (with query or current search)
   const getData = async (query) => {
-    const topic = query || search;  // if no query passed, use search state
+    const topic = query || search;
     try {
+      // 🚨 NewsAPI blocks frontend calls, so use a proxy/backend
       const response = await fetch(
         `https://newsapi.org/v2/everything?q=${topic}&apiKey=${API_KEY}`
       );
+
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status}`);
+      }
+
       const jsonData = await response.json();
-      setNewsData(jsonData.articles || []);
-    } catch (error) {
-      console.error("Error fetching data:", error);
+      if (jsonData.articles) {
+        setNewsData(jsonData.articles);
+        setError(null);
+      } else {
+        setNewsData([]);
+        setError("No articles found.");
+      }
+    } catch (err) {
+      console.error("Error fetching data:", err);
+      setError("Failed to fetch news. Try again later.");
     }
   };
 
-  // ✅ fetch default news on first render
+  // ✅ Run once on component mount
   useEffect(() => {
     getData();
   }, []);
 
-  // ✅ typing in search box
+  // ✅ typing in search bar
   const handleInput = (e) => {
     setSearch(e.target.value);
   };
 
-  // ✅ category buttons
+  // ✅ category button click
   const userInput = (e) => {
     const value = e.target.value;
     setSearch(value);
-    getData(value);   // fetch directly with value
+    getData(value);
   };
 
   return (
@@ -69,7 +84,10 @@ const Newsapp = () => {
       </div>
 
       <div>
-        {newsData ? <Card data={newsData} /> : <p>Loading...</p>}
+        {error && <p style={{ color: "red" }}>{error}</p>}
+        {!error && !newsData && <p>Loading...</p>}
+        {!error && newsData && newsData.length > 0 && <Card data={newsData} />}
+        {!error && newsData && newsData.length === 0 && <p>No news available.</p>}
       </div>
     </div>
   );
